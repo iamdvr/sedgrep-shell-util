@@ -1,0 +1,68 @@
+#/bin/sh
+PRINTUSAGE='false' ;
+alias echo='>&2 echo'
+
+# Reset
+Color_Off='\033[0m'       # Text Reset
+
+# Bold
+BRed='\033[1;31m'         # Red
+
+NEW_LINE_PATTERN='^\['
+
+if ! [ -t 0 ] ; then  # Check if input stream is coming by piping i.e not from stdin
+	if [[ $# -lt 1 ]] ; then
+		echo -e $BRed 'Error : Piping is made but no search pattern provided ' $Color_Off ;
+                PRINTUSAGE='true' ;
+	elif [[ $# -lt 2 ]] ; then
+		echo 'Piping with only search pattern ' ;
+		THREAD_OR_SEARCH_PATTERN=$1
+		SEDCMD="sed -nr ':main; /$NEW_LINE_PATTERN.*$THREAD_OR_SEARCH_PATTERN/ { :loop; p; n; /$NEW_LINE_PATTERN/ b main; b loop} ' "
+	elif [[ $# -lt 3 ]] ; then
+		echo 'Piping , Date and search pattern ' ;
+		DATE_PATTERN=$1
+		THREAD_OR_SEARCH_PATTERN=$2
+		SEDCMD="sed -nr ':main; /$NEW_LINE_PATTERN$DATE_PATTERN.*$THREAD_OR_SEARCH_PATTERN/ { :loop; p; n; /$NEW_LINE_PATTERN/ b main; b loop} ' "
+	elif [[ $# -gt 3 ]] ; then
+		echo -e $BRed 'When Piping exist, only two arguments expected.' $Color_Off ;
+		PRINTUSAGE='true' ;
+	fi
+else 
+        if [[ $# -lt 2 ]] ; then
+                echo -e $BRed 'Error : Expecting Optional Date Pattern with search pattern and also filename.' $Color_Off ;
+		PRINTUSAGE='true' ;
+        elif [[ $# -lt 3 ]] ; then
+                echo 'No Piping with only search pattern and filename provided' ;
+		THREAD_OR_SEARCH_PATTERN=$1
+		INPUT_FILE_NAME=$2
+		SEDCMD="sed -nr ':main; /$NEW_LINE_PATTERN.*$THREAD_OR_SEARCH_PATTERN/ { :loop; p; n; /$NEW_LINE_PATTERN/ b main; b loop} ' $INPUT_FILE_NAME "
+        elif [[ $# -lt 4 ]] ; then
+                echo 'No Piping with both date+search pattern and filename provided' ;
+        	DATE_PATTERN=$1
+	        THREAD_OR_SEARCH_PATTERN=$2
+        	INPUT_FILE_NAME=$3
+	        SEDCMD="sed -nr ':main; /$NEW_LINE_PATTERN$DATE_PATTERN.*$THREAD_OR_SEARCH_PATTERN/ { :loop; p; n; /$NEW_LINE_PATTERN/ b main; b loop} ' $INPUT_FILE_NAME "
+        elif [[ $# -gt 4 ]] ; then
+                echo -e $BRed 'Error: Expecting maximum of 3 arguments in no piping flow.' $Color_Off ;
+		PRINTUSAGE='true' ;
+        fi
+fi
+
+if [[ $PRINTUSAGE == 'true' ]] ; then
+	echo ' Current args -> {' $* '}';
+	echo 'Usage : '
+	echo '    cat {INPUT_FILE_NAME}  | sedgrep  {DATE_PATTERN} {THREAD_OR_SEARCH_PATTERN} '
+	echo '    cat {INPUT_FILE_NAME}  | sedgrep  {THREAD_OR_SEARCH_PATTERN} '
+	echo '    sedgrep {DATE_PATTERN} {THREAD_OR_SEARCH_PATTERN} {INPUT_FILE_NAME}'
+	echo '    sedgrep {THREAD_OR_SEARCH_PATTERN} {INPUT_FILE_NAME}'
+	echo 'Example : '
+	echo '    cat sampleInput.log | sedgrep 2016-05-23 DB_CONN'
+	echo '    cat sampleInput.log | sedgrep DB_CONN'
+	echo '    sedgrep 2016-05-23 DB_CONN sampleInput.log'
+	echo '    sedgrep DB_CONN sampleInput.log'
+	exit 1
+fi
+
+echo $SEDCMD
+eval $SEDCMD
+
