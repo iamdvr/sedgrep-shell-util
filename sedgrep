@@ -64,5 +64,6 @@ if [[ $PRINTUSAGE == 'true' ]] ; then
 	exit 1
 fi
 
-echo $SEDCMD
+#echo $SEDCMD
 eval $SEDCMD
+
